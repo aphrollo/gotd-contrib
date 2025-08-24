@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-faster/errors"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/multierr"
 
 	"github.com/gotd/contrib/storage"
@@ -78,7 +78,7 @@ func (s PeerStorage) Iterate(ctx context.Context) (storage.PeerIterator, error) 
 	}, result.Err()
 }
 
-func (s PeerStorage) add(ctx context.Context, associated []string, value storage.Peer) (rerr error) {
+func (s PeerStorage) add(ctx context.Context, associated []string, value storage.Peer) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return errors.Errorf("marshal: %w", err)
@@ -89,14 +89,11 @@ func (s PeerStorage) add(ctx context.Context, associated []string, value storage
 		if err := s.redis.Set(ctx, id, data, 0).Err(); err != nil {
 			return errors.Errorf("set id <-> data: %w", err)
 		}
-
 		return nil
 	}
 
+	// Use TxPipeline in v9
 	tx := s.redis.TxPipeline()
-	defer func() {
-		multierr.AppendInto(&rerr, tx.Close())
-	}()
 
 	if err := tx.Set(ctx, id, data, 0).Err(); err != nil {
 		return errors.Errorf("set id <-> data: %w", err)
@@ -108,6 +105,7 @@ func (s PeerStorage) add(ctx context.Context, associated []string, value storage
 		}
 	}
 
+	// Execute pipeline
 	if _, err := tx.Exec(ctx); err != nil {
 		return errors.Errorf("exec: %w", err)
 	}

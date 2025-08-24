@@ -7,7 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/go-faster/errors"
-	redisclient "github.com/go-redis/redis/v8"
+	redisclient "github.com/redis/go-redis/v9"
 
 	"github.com/gotd/td/telegram"
 

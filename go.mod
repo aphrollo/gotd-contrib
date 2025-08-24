@@ -18,6 +18,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/minio/minio-go/v7 v7.0.94
 	github.com/prometheus/client_golang v1.22.0
+	github.com/redis/go-redis/v9 v9.12.1
 	github.com/stretchr/testify v1.10.0
 	go.etcd.io/bbolt v1.4.3
 	go.opentelemetry.io/otel v1.37.0

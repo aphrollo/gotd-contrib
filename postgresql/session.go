@@ -21,15 +21,15 @@ type SessionStorage struct {
 	kv.Session
 }
 
-// NewSessionStorage creates new SessionStorage for a given agent id and table.
-func NewSessionStorage(pool *pgxpool.Pool, agentID int64, table string) SessionStorage {
+// NewSessionStorage creates new SessionStorage for a given id and table.
+func NewSessionStorage(pool *pgxpool.Pool, id int64, table string) SessionStorage {
 	client := &Client{
 		pool:  pool,
-		id:    agentID,
+		id:    id,
 		table: table,
 	}
 	return SessionStorage{
-		Session: kv.NewSession(client, fmt.Sprintf("%d", agentID)),
+		Session: kv.NewSession(client, fmt.Sprintf("%d", id)),
 	}
 }
 

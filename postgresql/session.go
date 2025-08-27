@@ -3,7 +3,6 @@ package postgresql
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"github.com/go-faster/errors"
@@ -44,7 +43,12 @@ type Client struct {
 func (c *Client) Set(ctx context.Context, _ string, sessionStr string) error {
 	query := fmt.Sprintf(`
 		UPDATE %s
-		SET data = jsonb_set(coalesce(data, '{}'), '{session_string}', to_jsonb($1::text), true),
+		SET data = jsonb_set(
+			coalesce(data, '{}'),
+			'{session_string}',
+			to_jsonb($1::text), -- keep as string in JSON
+			true
+		),
 		    updated_at = NOW()
 		WHERE id = $2
 	`, c.table)
@@ -59,28 +63,22 @@ func (c *Client) Set(ctx context.Context, _ string, sessionStr string) error {
 // Get retrieves the full JSONB data for the agent.
 func (c *Client) Get(ctx context.Context, _ string) (string, error) {
 	query := fmt.Sprintf(`
-		SELECT data
+		SELECT data->>'session_string'
 		FROM %s
 		WHERE id = $1
 	`, c.table)
 
-	var data sql.NullString
-	err := c.pool.QueryRow(ctx, query, c.id).Scan(&data)
+	var sessionStr sql.NullString
+	err := c.pool.QueryRow(ctx, query, c.id).Scan(&sessionStr)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", kv.ErrKeyNotFound
 		}
-		return "", fmt.Errorf("postgres: failed to get session for agent_id=%d: %w", c.id, err)
+		return "", fmt.Errorf("postgres: failed to get session_string for agent_id=%d: %w", c.id, err)
 	}
-	if !data.Valid {
+	if !sessionStr.Valid {
 		return "", kv.ErrKeyNotFound
 	}
 
-	// Validate JSON
-	var tmp json.RawMessage
-	if err := json.Unmarshal([]byte(data.String), &tmp); err != nil {
-		return "", fmt.Errorf("postgres: invalid JSON data for agent_id=%d: %w", c.id, err)
-	}
-
-	return data.String, nil
+	return sessionStr.String, nil
 }

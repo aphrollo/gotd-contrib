@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/go-faster/errors"
 	"github.com/gotd/td/telegram/updates"
@@ -17,25 +16,23 @@ var _ updates.ChannelAccessHasher = (*AccessHasher)(nil)
 type AccessHasher struct {
 	client *redis.Client
 	prefix string // e.g., "channel_accesshash:"
-	ttl    time.Duration
 }
 
 // NewAccessHasher creates a new Redis-backed access hasher.
 // ttl can be 0 for permanent storage.
-func NewAccessHasher(client *redis.Client, prefix string, ttl time.Duration) *AccessHasher {
+func NewAccessHasher(client *redis.Client, prefix string) *AccessHasher {
 	return &AccessHasher{
 		client: client,
 		prefix: prefix,
-		ttl:    ttl,
 	}
 }
 
-func (h *AccessHasher) key(userID int64) string {
-	return fmt.Sprintf("%s%d", h.prefix, userID) // one key per agent
+func (h *AccessHasher) Key(userID int64) string {
+	return fmt.Sprintf("%s%d", h.prefix, userID) // one Key per agent
 }
 
 func (h *AccessHasher) GetChannelAccessHash(ctx context.Context, userID, channelID int64) (int64, bool, error) {
-	key := h.key(userID)
+	key := h.Key(userID)
 	val, err := h.client.HGet(ctx, key, fmt.Sprintf("%d", channelID)).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -48,6 +45,6 @@ func (h *AccessHasher) GetChannelAccessHash(ctx context.Context, userID, channel
 }
 
 func (h *AccessHasher) SetChannelAccessHash(ctx context.Context, userID, channelID, accessHash int64) error {
-	key := h.key(userID)
+	key := h.Key(userID)
 	return h.client.HSet(ctx, key, fmt.Sprintf("%d", channelID), accessHash).Err()
 }

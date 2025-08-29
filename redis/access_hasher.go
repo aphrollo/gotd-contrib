@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-faster/errors"
@@ -29,41 +30,24 @@ func NewAccessHasher(client *redis.Client, prefix string, ttl time.Duration) *Ac
 	}
 }
 
-// key generates a Redis key for user+channel
-func (h *AccessHasher) key(userID, channelID int64) string {
-	return fmt.Sprintf("%s%d:%d", h.prefix, userID, channelID)
+func (h *AccessHasher) key(userID int64) string {
+	return fmt.Sprintf("%s%d", h.prefix, userID) // one key per agent
 }
 
-// GetChannelAccessHash retrieves the access hash for a given user and channel
 func (h *AccessHasher) GetChannelAccessHash(ctx context.Context, userID, channelID int64) (int64, bool, error) {
-	key := h.key(userID, channelID)
-	val, err := h.client.Get(ctx, key).Result()
+	key := h.key(userID)
+	val, err := h.client.HGet(ctx, key, fmt.Sprintf("%d", channelID)).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return 0, false, nil
 		}
-		return 0, false, fmt.Errorf("redis: failed to get channel access hash: %w", err)
+		return 0, false, err
 	}
-
-	var hash int64
-	if _, err := fmt.Sscanf(val, "%d", &hash); err != nil {
-		return 0, false, fmt.Errorf("redis: failed to parse access hash: %w", err)
-	}
+	hash, _ := strconv.ParseInt(val, 10, 64)
 	return hash, true, nil
 }
 
-// SetChannelAccessHash stores or updates the access hash
 func (h *AccessHasher) SetChannelAccessHash(ctx context.Context, userID, channelID, accessHash int64) error {
-	key := h.key(userID, channelID)
-	val := fmt.Sprintf("%d", accessHash)
-	var err error
-	if h.ttl > 0 {
-		err = h.client.Set(ctx, key, val, h.ttl).Err()
-	} else {
-		err = h.client.Set(ctx, key, val, 0).Err()
-	}
-	if err != nil {
-		return fmt.Errorf("redis: failed to set channel access hash: %w", err)
-	}
-	return nil
+	key := h.key(userID)
+	return h.client.HSet(ctx, key, fmt.Sprintf("%d", channelID), accessHash).Err()
 }

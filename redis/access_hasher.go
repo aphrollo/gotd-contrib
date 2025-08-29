@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/go-faster/errors"
-	"github.com/go-redis/redis/v8"
 	"github.com/gotd/td/telegram/updates"
+	"github.com/redis/go-redis/v9"
 )
 
 var _ updates.ChannelAccessHasher = (*AccessHasher)(nil)

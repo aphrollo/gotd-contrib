@@ -21,6 +21,10 @@ type updatesWithPeers interface {
 }
 
 func (h updateHook) Handle(ctx context.Context, u tg.UpdatesClass) error {
+	return h.next.Handle(ctx, u)
+}
+
+func (h updateHook) Handle2(ctx context.Context, u tg.UpdatesClass) error {
 	updates, ok := u.(updatesWithPeers)
 	if !ok {
 		return h.next.Handle(ctx, u)

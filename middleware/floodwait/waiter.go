@@ -216,3 +216,21 @@ func (w *Waiter) Handle(next tg.Invoker) telegram.InvokeFunc {
 		}
 	}
 }
+
+func (w *Waiter) Ready(ctx context.Context) error {
+	ticker := w.clock.Ticker(w.tick) // returns clock.Ticker
+	defer ticker.Stop()
+
+	for {
+		if !w.sch.hasActiveFlood() {
+			return nil
+		}
+
+		select {
+		case <-ticker.C(): // use the C() method to get the channel
+			// continue looping
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}

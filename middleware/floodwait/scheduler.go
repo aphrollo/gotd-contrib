@@ -89,3 +89,15 @@ func (s *scheduler) flood(req request, d time.Duration) {
 
 	s.queue.move(k, now, d)
 }
+
+func (s *scheduler) hasActiveFlood() bool {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	for _, d := range s.state {
+		if d > 0 {
+			return true
+		}
+	}
+	return false
+}

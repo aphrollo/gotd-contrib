@@ -1,4 +1,4 @@
-module github.com/gotd/contrib
+module github.com/aphrollo/gotd-contrib
 
 go 1.24.0
 
